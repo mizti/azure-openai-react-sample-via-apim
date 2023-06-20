@@ -1,12 +1,14 @@
-azure-openai-react-sampleをテンプレート要約用に修正したものです
-
 English follows
 
 # このリポジトリについて
 
 ![Screen Shot](./images/ss.png)
 
-* このリポジトリはAzure AD認証に基づいてAzure Open AIを叩くAPIのreactで実装されたデモです
+
+
+* このリポジトリはAzure AD認証に基づいてAzure Open AIを叩くAPIのreactで実装されたデモである
+https://github.com/mizti/azure-openai-react-sample
+をAPI Management経由でのリクエスト / Azure OpenAI OAuth2.0形式に改修したデモです
 
 * Azure ADで認証したログインのユーザーの権限でAzure Open AIを利用します
 
@@ -29,33 +31,12 @@ Azureポータルにログインし、「アプリの登録」> 「新規登録�
 任意の名前を付け、サポートされているアカウントの種類でシングルテナントを選択します。
 リダイレクトURIでは種類でSPAを選択し、ローカルで動かす場合はhttp://localhost:3000、リモートサーバ上で動かす場合には適宜そのサーバのドメインを指定します。
 
-### 2. 登録アプリへのAPIのアクセス許可追加
+### 2. 登録アプリへの公開API登録
 
-登録されたアプリを選択し、「APIのアクセス許可」を選択します。「＋アクセス許可の追加」を選択し「Microsoft Cognitive Service」- 「user impersonation」を選択します。
+作成されたアプリの「APIの公開」を選択し、スコープを追加します。スコープ名に適当な値（以下の例では「chat」とします）を指定し、同意できるのは「管理者とユーザー」、その他の項目は適宜投入し「スコープの追加」を押下します。
 
-追加が完了したら、「(テナント名)に管理者の同意を与えます」を必ず押下してください。
-（Azure ADの管理者権限が必要です）
-
-### 3. Azure Open AIのデプロイ
-
-適当なリソースグループを作成し、Azure Open AIをデプロイします。
-「名前」で指定した値がサブドメインとして必要になるので適宜メモしてください。
-NetworkタブのTypeとして "All networks, including the internet, can access this resource." を選択します。（VNet等経由でアクセスさせたい方は適宜選択してください）
-デプロイ完了まで15分程度を要します。
-
-※ 現時点ではAzure Open AIのご利用には申請が必要です
-
-### 4. Azure Open AIモデルのデプロイ
-
-Azure Open AIが作成されたら、次はモデルのデプロイを行います。作成されたAzure Open AIを選択し、「モデル デプロイ」＞「作成」を選択してください。
-モデルは何でも構いませんが、ここでは「gpt-35-turbo」を選択するものとします。
-
-指定したモデルデプロイ名を後ほど設定で使います。
-
-### 5. ロールの付与
-
-当サンプルにログインして操作したいユーザーには「Cognitive Service Open AI User」ロールが必要となります。（）
-Azure Open AIの「アクセス制御 (IAM)」から付与を行ってください。
+### 3. Azure Open AI, APIM等バックエンド環境のデプロイ
+別途のIaC（公開予定）を用いてAPI Management + Azure OpenAIの環境を構築します
 
 ここまででAzure上の準備は完了です。
 
@@ -68,9 +49,11 @@ Azure Open AIの「アクセス制御 (IAM)」から付与を行ってくださ�
 |REACT_APP_CLIENT_ID  |Azure ADに登録したアプリのクライアントID  |
 |REACT_APP_TENANT_ID  |Azure ADのディレクトリ(テナント)ID  |
 |REACT_APP_REDIRECT_URL  |リダイレクト先に指定したURL  |
-|REACT_APP_OPEN_AI_SUBDOMAIN  |Azure OpenAIに指定した名前(=サブドメイン)  |
+|REACT_APP_APIM_SCOPE|JWT取得対象のスコープ名|
+|REACT_APP_OPEN_AI_SUBDOMAIN  |**Azure Management**の名前(=サブドメイン)  |
 |REACT_APP_OPEN_AI_MODEL_NAME  |デプロイしたモデルの名前(選択したモデル名ではなく自分でつけた名前)  |
 |REACT_APP_OPEN_AI_API_VERSION  |Azure OpenAIのAPIバージョン  |
+|REACT_APP_APIM_SUBSCRIPTION_KEY|API Managementアクセス用のサブスクリプションキー|
 
 
 2. パッケージのインストール
@@ -99,7 +82,9 @@ npm start
 
 ![Screen Shot](./images/ss.png)
 
-* This repository is a demo implemented in React that calls the Azure Open AI API based on Azure AD authentication.
+* This repository contains a demo implemented in React for an API that calls Azure Open AI based on Azure AD authentication. It is a revised version of the demo at https://github.com/mizti/azure-openai-react-sample to accommodate requests via API Management / Azure OpenAI OAuth2.0 format.
+
+* Azure Open AI is used under the authority of the users who authenticated with Azure AD.
 
 # Architecture Overview
 
@@ -118,31 +103,15 @@ npm start
 
 Log in to the Azure portal, go to "App registrations" > "New registration". Give it a name and select "Single tenant" for the supported account types. For the Redirect URI, choose "SPA" and specify "http://localhost:3000" if running locally or the appropriate server domain for remote servers.
 
-### 2. Add API permissions to the registered app
+### 2. Expose API Registration for the Registered App
 
-Select the registered app and click on "API permissions". Choose "+ Add a permission" and select "Microsoft Cognitive Service" > "user impersonation".
+Select "Expose an API" for the created app and add a scope. Specify a suitable value for the scope name (we'll use "chat" as an example below), for who can consent select "Admins and users", fill in the other items as appropriate and click "Add a scope".
 
-Once added, be sure to click on "Grant admin consent for (Tenant Name)".
-(Azure AD admin privileges are required)
+### 3. Deploy Azure Open AI, APIM, etc. Backend Environment
 
-### 3. Deploy Azure Open AI
+Use separate IaC (to be published) to build the environment with API Management + Azure OpenAI.
 
-Create a suitable resource group and deploy Azure Open AI. Note down the name specified as it will be needed as the subdomain later. Choose "All networks, including the internet, can access this resource." for the Network Type. (Select the appropriate option if you want access via VNet, etc.)
-Deployment takes about 15 minutes.
-
-* At this time, an application is required to use Azure Open AI.
-
-### 4. Deploy Azure Open AI model
-
-Once Azure Open AI is created, deploy the model. Select the created Azure Open AI, then go to "Model Deployment" > "Create". You can choose any model, but for this example, we will select "gpt-35-turbo".
-
-The model deployment name specified will be used in the configuration later.
-
-### 5. Assign roles
-
-Users who want to log in and use this sample need the "Cognitive Service Open AI User" role. Assign it from the "Access control (IAM)" of the Azure Open AI.
-
-With this, the preparations on Azure are complete.
+The preparation on Azure is now complete.
 
 ## How to use
 
@@ -153,9 +122,11 @@ With this, the preparations on Azure are complete.
 |REACT_APP_CLIENT_ID  |Client ID of the app registered in Azure AD  |
 |REACT_APP_TENANT_ID  |Directory (Tenant) ID of Azure AD  |
 |REACT_APP_REDIRECT_URL  |URL specified as redirect destination  |
-|REACT_APP_OPEN_AI_SUBDOMAIN  |Name specified for Azure OpenAI (equals subdomain)  |
-|REACT_APP_OPEN_AI_MODEL_NAME  |Name of the deployed model (not the selected model name, but the name you assigned)  |
-|REACT_APP_OPEN_AI_API_VERSION  |Azure OpenAI API version  |
+|REACT_APP_APIM_SCOPE|Scope name for obtaining JWT|
+|REACT_APP_OPEN_AI_SUBDOMAIN  |Name (=subdomain) specified for **Azure API Management**|
+|REACT_APP_OPEN_AI_MODEL_NAME  |	Name of the deployed model (not the selected model name, but the name you gave it) |
+|REACT_APP_OPEN_AI_API_VERSION  |API version of Azure OpenAI|
+|REACT_APP_APIM_SUBSCRIPTION_KEY|Subscription key for accessing API Management|
 
 2. Install packages
 
